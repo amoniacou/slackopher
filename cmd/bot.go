@@ -1,16 +1,36 @@
-package slackopher
+package main
 
 import (
-	"github.com/nlopes/slack"
 	"gopkg.in/urfave/cli.v2"
+	"log"
+	"github.com/nlopes/slack"
 	"github.com/Sirupsen/logrus"
+	"github.com/amoniacou/slackopher"
 )
 
-func Bot(c *cli.Context) error {
-	api := slack.New(c.GlobalString("slack_key"))
+var botCmd = cli.Command{
+	Name: "bot",
+	Usage: "starts slaclopher bot daemon",
+	Aliases: []string{"b"},
+	Action: func(c *cli.Context) {
+		if err := bot(c); err != nil {
+			log.Fatal(err)
+		}
+	},
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name: "slack_key",
+			EnvVar: "SLACK_KEY",
+			Usage: "Slack API key",
+		},
+	},
+}
+
+func bot(c *cli.Context) error {
+	api := slack.New(c.String("slack_key"))
 	api.SetDebug(c.GlobalBool("debug"))
 	rtm := api.NewRTM()
-	historian := NewHistorian("http://127.0.0.1:9200")
+	historian := slackopher.NewHistorian(c.GlobalString("elastic_url"))
 
 	channels, err := api.GetChannels(false)
 	if err != nil {
@@ -20,16 +40,16 @@ func Bot(c *cli.Context) error {
 		historian.JoinChannel(&channel)
 	}
 
-	responseChannel := make(chan Response)
-	commandChannel := make(chan *Command)
+	responseChannel := make(chan slackopher.Response)
+	commandChannel := make(chan *slackopher.Command)
 
 	go rtm.ManageConnection()
 
 	// Handle Bot Commands
-	go Commander(commandChannel, responseChannel)
+	go slackopher.Commander(commandChannel, responseChannel)
 
 	// Handle Bot Response
-	go Responder(api, responseChannel)
+	go slackopher.Responder(api, responseChannel)
 
 	Loop:
 	for {

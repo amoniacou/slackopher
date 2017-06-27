@@ -1,0 +1,12 @@
+FROM golang:alpine
+MAINTAINER Olexander Simonov <oleksandr@amoniac.eu>
+
+RUN apk --update-cache --allow-untrusted \
+        --repository http://dl-4.alpinelinux.org/alpine/edge/community \
+        --arch=x86_64 add \
+    glide make git \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR $GOPATH/src/github.com/amoniacou/slackopher
+
+CMD ["make"]

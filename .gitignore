@@ -2,3 +2,7 @@
 vendor
 glide.lock
 bin
+/slackopher
+slackopher
+*~
+.DS_Store
